@@ -7,6 +7,32 @@ pipeline {
     }
 
     stages {
+        stage('Build & Push Docker Images') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-hub-credentials',
+                    usernameVariable: 'DOCKERHUB_USER',
+                    passwordVariable: 'DOCKERHUB_PASS'
+                )]) {
+                    sh '''
+                        echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USER" --password-stdin
+
+                        echo "Building Docker images..."
+                        docker build -t $DOCKERHUB_USER/backend:latest ./backend
+                        docker build -t $DOCKERHUB_USER/frontend:latest ./frontend
+                        docker build -t $DOCKERHUB_USER/ml_service:latest ./ml_service
+
+                        echo "Pushing images to Docker Hub..."
+                        docker push $DOCKERHUB_USER/backend:latest
+                        docker push $DOCKERHUB_USER/frontend:latest
+                        docker push $DOCKERHUB_USER/ml_service:latest
+
+                        docker logout
+                    '''
+                }
+            }
+        }
+
         stage('Run Ansible Playbook') {
             steps {
                 withCredentials([
@@ -14,19 +40,16 @@ pipeline {
                     string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASS')
                 ]) {
                     sh '''
-                        #!/bin/bash
                         echo "Running Ansible Playbook..."
                         export ANSIBLE_HOST_KEY_CHECKING=False
 
-                        # Write vault password to a temp file securely
                         VAULT_PASS_FILE=$(mktemp)
                         echo "$VAULT_PASS" > "$VAULT_PASS_FILE"
                         chmod 600 "$VAULT_PASS_FILE"
 
-                        # Run ansible playbook using the vault password file
-                        ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --private-key=$SSH_KEY --vault-password-file="$VAULT_PASS_FILE"
+                        ansible-playbook -i ansible/inventory.ini ansible/playbook.yml \
+                            --private-key=$SSH_KEY --vault-password-file="$VAULT_PASS_FILE"
 
-                        # Remove the temp vault password file
                         rm -f "$VAULT_PASS_FILE"
                     '''
 
@@ -61,7 +84,6 @@ pipeline {
                         kubectl apply -f k8s/elasticsearch.yml
                         kubectl apply -f k8s/kibana.yml
                         kubectl apply -f k8s/logstash.yml
-                        # Skipping configmaps.yml as per request
                         kubectl apply -f k8s/pv.yaml
                     '''
                 }
