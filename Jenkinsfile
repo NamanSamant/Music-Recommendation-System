@@ -6,12 +6,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                echo "Checking out repository..."
-                git url: 'https://github.com/NamanSamant/Music-Recommendation-System.git'
-            }
-        }
 
         stage('Run Ansible Playbook') {
             steps {
