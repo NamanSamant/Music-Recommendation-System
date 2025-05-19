@@ -3,6 +3,7 @@ pipeline {
 
     parameters {
         booleanParam(name: 'RUN_K8S', defaultValue: false, description: 'Deploy to Kubernetes?')
+        booleanParam(name: 'RUN_COMPOSE', defaultValue: false, description: 'Run Docker Compose?')
     }
 
     stages {
@@ -28,6 +29,18 @@ pipeline {
                         # Remove the temp vault password file
                         rm -f "$VAULT_PASS_FILE"
                     '''
+
+                    script {
+                        if (params.RUN_COMPOSE) {
+                            echo "RUN_COMPOSE is true, running docker-compose up"
+                            sh '''
+                                echo "Starting Docker Compose stack..."
+                                docker-compose -f docker-compose.yml up -d
+                            '''
+                        } else {
+                            echo "RUN_COMPOSE is false, skipping docker-compose"
+                        }
+                    }
                 }
             }
         }
@@ -48,7 +61,7 @@ pipeline {
                         kubectl apply -f k8s/elasticsearch.yml
                         kubectl apply -f k8s/kibana.yml
                         kubectl apply -f k8s/logstash.yml
-                        kubectl apply -f k8s/configmaps.yml
+                        # Skipping configmaps.yml as per request
                         kubectl apply -f k8s/pv.yml
                     '''
                 }
