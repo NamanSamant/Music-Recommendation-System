@@ -62,7 +62,7 @@ pipeline {
                         kubectl apply -f k8s/kibana.yml
                         kubectl apply -f k8s/logstash.yml
                         # Skipping configmaps.yml as per request
-                        kubectl apply -f k8s/pv.yml
+                        kubectl apply -f k8s/pv.yaml
                     '''
                 }
             }
