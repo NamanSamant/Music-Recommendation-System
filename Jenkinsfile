@@ -6,7 +6,6 @@ pipeline {
     }
 
     stages {
-
         stage('Run Ansible Playbook') {
             steps {
                 withCredentials([
@@ -14,11 +13,21 @@ pipeline {
                     string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASS')
                 ]) {
                     sh '''
-                #!/bin/bash
-                echo "Running Ansible Playbook..."
-                export ANSIBLE_HOST_KEY_CHECKING=False
-                ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --private-key=$SSH_KEY --vault-password-file=$VAULT_PASS
-                '''
+                        #!/bin/bash
+                        echo "Running Ansible Playbook..."
+                        export ANSIBLE_HOST_KEY_CHECKING=False
+
+                        # Write vault password to a temp file securely
+                        VAULT_PASS_FILE=$(mktemp)
+                        echo "$VAULT_PASS" > "$VAULT_PASS_FILE"
+                        chmod 600 "$VAULT_PASS_FILE"
+
+                        # Run ansible playbook using the vault password file
+                        ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --private-key=$SSH_KEY --vault-password-file="$VAULT_PASS_FILE"
+
+                        # Remove the temp vault password file
+                        rm -f "$VAULT_PASS_FILE"
+                    '''
                 }
             }
         }
@@ -32,6 +41,7 @@ pipeline {
                     sh '''
                         echo "Deploying to Kubernetes..."
                         export KUBECONFIG=$KUBECONFIG_FILE
+
                         kubectl apply -f k8s/backend.yml
                         kubectl apply -f k8s/frontend.yml
                         kubectl apply -f k8s/ml_service.yml
