@@ -11,3 +11,6 @@ data/*
 
 .env
 backend/.env
+
+k8s/secrets.yml
+k8s/configmaps.yml
