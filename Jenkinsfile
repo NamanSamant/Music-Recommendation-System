@@ -17,7 +17,7 @@ pipeline {
                 #!/bin/bash
                 echo "Running Ansible Playbook..."
                 export ANSIBLE_HOST_KEY_CHECKING=False
-                ansible-playbook -i inventory.ini playbook.yml --private-key=$SSH_KEY --vault-password-file=$VAULT_PASS
+                ansible-playbook -i ansible/inventory.ini ansible/playbook.yml --private-key=$SSH_KEY --vault-password-file=$VAULT_PASS
                 '''
                 }
             }
