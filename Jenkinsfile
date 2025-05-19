@@ -14,13 +14,11 @@ pipeline {
                     string(credentialsId: 'ansible-vault-password', variable: 'VAULT_PASS')
                 ]) {
                     sh '''
-                        echo "Running Ansible Playbook..."
-                        export ANSIBLE_HOST_KEY_CHECKING=False
-                        ansible-playbook playbook.yml \
-                          --inventory inventory.ini \
-                          --private-key $SSH_KEY \
-                          --vault-password-file <(echo "$VAULT_PASS")
-                    '''
+                #!/bin/bash
+                echo "Running Ansible Playbook..."
+                export ANSIBLE_HOST_KEY_CHECKING=False
+                ansible-playbook -i inventory.ini playbook.yml --private-key=$SSH_KEY --vault-password-file=$VAULT_PASS
+                '''
                 }
             }
         }
