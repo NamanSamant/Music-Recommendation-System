@@ -4,7 +4,6 @@ pipeline {
     parameters {
         booleanParam(name: 'RUN_K8S', defaultValue: false, description: 'Deploy to Kubernetes?')
         booleanParam(name: 'RUN_COMPOSE', defaultValue: false, description: 'Run Docker Compose?')
-        booleanParam(name: 'RETRAIN_MODEL', defaultValue: false, description: 'Retrain ML Model?')
     }
 
     triggers {
@@ -107,7 +106,6 @@ pipeline {
         stage('Retrain ML Model') {
             when {
                 anyOf {
-                    expression { return params.RETRAIN_MODEL }
                     triggeredBy 'TimerTrigger'
                 }
             }
