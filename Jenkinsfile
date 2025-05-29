@@ -4,6 +4,16 @@ pipeline {
     parameters {
         booleanParam(name: 'RUN_K8S', defaultValue: false, description: 'Deploy to Kubernetes?')
         booleanParam(name: 'RUN_COMPOSE', defaultValue: false, description: 'Run Docker Compose?')
+        booleanParam(name: 'RETRAIN_MODEL', defaultValue: false, description: 'Retrain ML Model?')
+    }
+
+    triggers {
+        cron('H H/12 * * *') // Runs every 12 hours (adjust as needed)
+    }
+
+    environment {
+        ML_DATA_DIR = "${WORKSPACE}/ml_service/data"
+        ML_MODEL_DIR = "${WORKSPACE}/ml_service/models"
     }
 
     stages {
@@ -48,7 +58,7 @@ pipeline {
                         chmod 600 "$VAULT_PASS_FILE"
 
                         ansible-playbook -i ansible/inventory.ini ansible/playbook-compose.yml \
-                            --private-key="SSH_KEY" --vault-password-file="$VAULT_PASS_FILE"
+                            --private-key="$SSH_KEY" --vault-password-file="$VAULT_PASS_FILE"
 
                         rm -f "$VAULT_PASS_FILE"
                     '''
@@ -86,11 +96,35 @@ pipeline {
                         chmod 600 "$VAULT_PASS_FILE"
 
                         ansible-playbook -i ansible/inventory.ini ansible/playbook-k8s.yml \
-                            --private-key="$SSH_KEY" --vault-password-file="$VAULT_PASS_FILE"\
+                            --private-key="$SSH_KEY" --vault-password-file="$VAULT_PASS_FILE"
 
                         rm -f "$VAULT_PASS_FILE"
                     '''
                 }
+            }
+        }
+
+        stage('Retrain ML Model') {
+            when {
+                anyOf {
+                    expression { return params.RETRAIN_MODEL }
+                    triggeredBy 'TimerTrigger'
+                }
+            }
+            steps {
+                echo "Starting ML model retraining..."
+
+                sh '''
+                    mkdir -p $ML_DATA_DIR $ML_MODEL_DIR
+
+                    docker run --rm \
+                        -v $ML_DATA_DIR:/app/data \
+                        -v $ML_MODEL_DIR:/app/models \
+                        $DOCKERHUB_USER/ml_service:latest \
+                        python main.py --train
+                '''
+
+                echo "Retraining complete. Model saved in: ${env.ML_MODEL_DIR}"
             }
         }
     }
