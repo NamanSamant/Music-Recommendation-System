@@ -8,7 +8,7 @@ pipeline {
     }
 
     triggers {
-        cron('H H/12 * * *') // Runs every 12 hours (adjust as needed)
+        cron('H H/12 * * *')
     }
 
     environment {
